@@ -61,7 +61,7 @@ export default function CommentSection({ postId, comments }: Props) {
               <div
                 key={comment.id}
                 id={`comment-${number}`}
-                className={`flex gap-3 rounded-lg transition-colors duration-300 ${isReply ? 'ml-10 pl-4 border-l-2' : ''}`}
+                className={`flex gap-3 rounded-lg transition-colors duration-300 ${isReply ? 'ml-16 pl-4 border-l-2' : ''}`}
                 style={isReply ? { borderColor: '#93c5fd' } : undefined}
               >
                 {/* コメント番号 */}
