@@ -4,6 +4,7 @@ export type Post = {
   body: string
   category: string
   likes: number
+  image_url: string | null
   created_at: string
   comment_count?: number
 }

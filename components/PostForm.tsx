@@ -1,17 +1,45 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import { CATEGORIES } from '@/types'
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 
 export default function PostForm() {
   const router = useRouter()
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [category, setCategory] = useState('japan')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('画像ファイルを選択してください')
+      return
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError('画像サイズは5MB以内にしてください')
+      return
+    }
+
+    setError('')
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  function handleRemoveImage() {
+    setImageFile(null)
+    setImagePreview(null)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -31,9 +59,29 @@ export default function PostForm() {
 
     try {
       const supabase = createSupabaseClient()
+      let imageUrl: string | null = null
+
+      // 画像が選択されていればStorageにアップロード
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${crypto.randomUUID()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('post-images')
+          .upload(fileName, imageFile)
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage
+          .from('post-images')
+          .getPublicUrl(fileName)
+
+        imageUrl = publicUrlData.publicUrl
+      }
+
       const { data, error: supabaseError } = await supabase
         .from('posts')
-        .insert({ title: title.trim(), body: body.trim(), category })
+        .insert({ title: title.trim(), body: body.trim(), category, image_url: imageUrl })
         .select()
         .single()
 
@@ -105,6 +153,41 @@ export default function PostForm() {
           rows={8}
           className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
         />
+      </div>
+
+      {/* 画像（任意） */}
+      <div>
+        <label className="block text-sm font-semibold text-gray-700 mb-1">
+          画像（任意）
+        </label>
+
+        {imagePreview ? (
+          <div className="relative inline-block">
+            <Image
+              src={imagePreview}
+              alt="プレビュー"
+              width={240}
+              height={240}
+              unoptimized
+              className="rounded-lg border border-gray-300 max-h-60 w-auto object-contain"
+            />
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-800 text-white text-xs flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:text-white file:cursor-pointer file:bg-[#1a3c6e]"
+          />
+        )}
+        <p className="text-xs text-gray-400 mt-1">5MBまでの画像ファイルを選択できます</p>
       </div>
 
       {/* 送信ボタン */}

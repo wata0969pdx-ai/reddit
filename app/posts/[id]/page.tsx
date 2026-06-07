@@ -87,6 +87,16 @@ export default async function PostDetailPage({ params }: { params: Params }) {
           {formatDate(post.created_at)}
         </p>
 
+        {/* 画像 */}
+        {post.image_url && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={post.image_url}
+            alt=""
+            className="w-full max-h-[480px] object-contain rounded-lg border border-gray-200 mb-4 bg-gray-50"
+          />
+        )}
+
         {/* 本文 */}
         <div className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap mb-6">
           {post.body}
