@@ -55,18 +55,25 @@ export default function CommentSection({ postId, comments }: Props) {
             const number = index + 1
             const replyToNumber = comment.reply_to_id ? numberById.get(comment.reply_to_id) : undefined
 
+            const isReply = Boolean(replyToNumber)
+
             return (
-              <div key={comment.id} id={`comment-${number}`} className="flex gap-3 rounded-lg transition-colors duration-300">
+              <div
+                key={comment.id}
+                id={`comment-${number}`}
+                className={`flex gap-3 rounded-lg transition-colors duration-300 ${isReply ? 'ml-10 pl-4 border-l-2' : ''}`}
+                style={isReply ? { borderColor: '#93c5fd' } : undefined}
+              >
                 {/* コメント番号 */}
                 <div
                   className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                  style={{ background: '#1a3c6e' }}
+                  style={{ background: isReply ? '#5b8def' : '#1a3c6e' }}
                 >
                   {number}
                 </div>
 
                 {/* コメント内容 */}
-                <div className="flex-1 bg-gray-50 rounded-lg px-4 py-3">
+                <div className={`flex-1 rounded-lg px-4 py-3 ${isReply ? 'bg-blue-50' : 'bg-gray-50'}`}>
                   {/* 返信先の表示 */}
                   {replyToNumber && (
                     <p className="text-xs font-semibold text-blue-600 mb-1">
