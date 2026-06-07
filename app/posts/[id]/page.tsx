@@ -4,6 +4,7 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { Post, Comment, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types'
 import LikeButton from '@/components/LikeButton'
 import CommentForm from '@/components/CommentForm'
+import CommentLikeButton from '@/components/CommentLikeButton'
 
 type Params = Promise<{ id: string }>
 
@@ -127,7 +128,10 @@ export default async function PostDetailPage({ params }: { params: Params }) {
                 {/* コメント内容 */}
                 <div className="flex-1 bg-gray-50 rounded-lg px-4 py-3">
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.body}</p>
-                  <p className="text-xs text-gray-400 mt-2">{formatDate(comment.created_at)}</p>
+                  <div className="flex items-center gap-3 mt-2">
+                    <p className="text-xs text-gray-400">{formatDate(comment.created_at)}</p>
+                    <CommentLikeButton commentId={comment.id} initialLikes={comment.likes} />
+                  </div>
                 </div>
               </div>
             ))}
