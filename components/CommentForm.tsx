@@ -94,6 +94,10 @@ export default function CommentForm({ postId, replyTo = null, onCancelReply }: P
         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
       />
 
+      <p className="text-xs text-gray-400">
+        ヒント：本文に <span className="font-mono font-semibold">{'>>'}番号</span> と書くと、そのコメントへのリンクになります（例：{'>>2'}）
+      </p>
+
       <div className="flex justify-end">
         <button
           type="submit"

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Comment } from '@/types'
 import CommentForm from '@/components/CommentForm'
 import CommentLikeButton from '@/components/CommentLikeButton'
+import CommentBody from '@/components/CommentBody'
 
 type ReplyTarget = {
   id: string
@@ -55,7 +56,7 @@ export default function CommentSection({ postId, comments }: Props) {
             const replyToNumber = comment.reply_to_id ? numberById.get(comment.reply_to_id) : undefined
 
             return (
-              <div key={comment.id} className="flex gap-3">
+              <div key={comment.id} id={`comment-${number}`} className="flex gap-3 rounded-lg transition-colors duration-300">
                 {/* コメント番号 */}
                 <div
                   className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
@@ -73,7 +74,7 @@ export default function CommentSection({ postId, comments }: Props) {
                     </p>
                   )}
 
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.body}</p>
+                  <CommentBody text={comment.body} />
 
                   <div className="flex items-center gap-3 mt-2">
                     <p className="text-xs text-gray-400">{formatDate(comment.created_at)}</p>
