@@ -3,8 +3,7 @@ import Link from 'next/link'
 import { createSupabaseClient } from '@/lib/supabase'
 import { Post, Comment, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types'
 import LikeButton from '@/components/LikeButton'
-import CommentForm from '@/components/CommentForm'
-import CommentLikeButton from '@/components/CommentLikeButton'
+import CommentSection from '@/components/CommentSection'
 
 type Params = Promise<{ id: string }>
 
@@ -99,44 +98,7 @@ export default async function PostDetailPage({ params }: { params: Params }) {
 
       {/* コメントセクション */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-base font-bold text-gray-900 mb-4">
-          コメント ({comments.length})
-        </h2>
-
-        {/* コメント投稿フォーム */}
-        <div className="mb-6">
-          <CommentForm postId={post.id} />
-        </div>
-
-        {/* コメント一覧 */}
-        {comments.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
-            まだコメントがありません。最初のコメントをどうぞ！
-          </p>
-        ) : (
-          <div className="space-y-4">
-            {comments.map((comment, index) => (
-              <div key={comment.id} className="flex gap-3">
-                {/* コメント番号 */}
-                <div
-                  className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold text-white"
-                  style={{ background: '#1a3c6e' }}
-                >
-                  {index + 1}
-                </div>
-
-                {/* コメント内容 */}
-                <div className="flex-1 bg-gray-50 rounded-lg px-4 py-3">
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.body}</p>
-                  <div className="flex items-center gap-3 mt-2">
-                    <p className="text-xs text-gray-400">{formatDate(comment.created_at)}</p>
-                    <CommentLikeButton commentId={comment.id} initialLikes={comment.likes} />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <CommentSection postId={post.id} comments={comments} />
       </div>
     </div>
   )

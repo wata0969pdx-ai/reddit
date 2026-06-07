@@ -13,6 +13,7 @@ export type Comment = {
   post_id: string
   body: string
   likes: number
+  reply_to_id: string | null
   created_at: string
 }
 
