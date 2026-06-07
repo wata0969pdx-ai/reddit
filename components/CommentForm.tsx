@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
+
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 
 type ReplyTarget = {
   id: string
@@ -18,6 +21,8 @@ type Props = {
 export default function CommentForm({ postId, replyTo = null, onCancelReply }: Props) {
   const router = useRouter()
   const [body, setBody] = useState('')
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
 
@@ -27,6 +32,29 @@ export default function CommentForm({ postId, replyTo = null, onCancelReply }: P
       document.getElementById('comment-textarea')?.focus()
     }
   }, [replyTo])
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (!file.type.startsWith('image/')) {
+      setError('画像ファイルを選択してください')
+      return
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError('画像サイズは5MB以内にしてください')
+      return
+    }
+
+    setError('')
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
+  }
+
+  function handleRemoveImage() {
+    setImageFile(null)
+    setImagePreview(null)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -41,17 +69,39 @@ export default function CommentForm({ postId, replyTo = null, onCancelReply }: P
 
     try {
       const supabase = createSupabaseClient()
+      let imageUrl: string | null = null
+
+      // 画像が選択されていればStorageにアップロード（投稿と同じ保存場所を使う）
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop()
+        const fileName = `${crypto.randomUUID()}.${fileExt}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('post-images')
+          .upload(fileName, imageFile)
+
+        if (uploadError) throw uploadError
+
+        const { data: publicUrlData } = supabase.storage
+          .from('post-images')
+          .getPublicUrl(fileName)
+
+        imageUrl = publicUrlData.publicUrl
+      }
+
       const { error: supabaseError } = await supabase
         .from('comments')
         .insert({
           post_id: postId,
           body: body.trim(),
           reply_to_id: replyTo?.id ?? null,
+          image_url: imageUrl,
         })
 
       if (supabaseError) throw supabaseError
 
       setBody('')
+      handleRemoveImage()
       onCancelReply?.()
       // サーバーコンポーネントのデータを再取得して画面を更新
       router.refresh()
@@ -93,6 +143,36 @@ export default function CommentForm({ postId, replyTo = null, onCancelReply }: P
         rows={4}
         className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y"
       />
+
+      {/* 画像（任意） */}
+      <div>
+        {imagePreview ? (
+          <div className="relative inline-block">
+            <Image
+              src={imagePreview}
+              alt="プレビュー"
+              width={160}
+              height={160}
+              unoptimized
+              className="rounded-lg border border-gray-300 max-h-40 w-auto object-contain"
+            />
+            <button
+              type="button"
+              onClick={handleRemoveImage}
+              className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-gray-800 text-white text-xs flex items-center justify-center"
+            >
+              ✕
+            </button>
+          </div>
+        ) : (
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleImageChange}
+            className="text-sm text-gray-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:text-white file:cursor-pointer file:bg-[#1a3c6e]"
+          />
+        )}
+      </div>
 
       <p className="text-xs text-gray-400">
         ヒント：本文に <span className="font-mono font-semibold">{'>>'}番号</span> と書くと、そのコメントへのリンクになります（例：{'>>2'}）

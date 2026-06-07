@@ -83,6 +83,16 @@ export default function CommentSection({ postId, comments }: Props) {
 
                   <CommentBody text={comment.body} />
 
+                  {/* 添付画像 */}
+                  {comment.image_url && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={comment.image_url}
+                      alt=""
+                      className="mt-2 max-h-60 max-w-full w-auto rounded-lg border border-gray-200 object-contain bg-white"
+                    />
+                  )}
+
                   <div className="flex items-center gap-3 mt-2">
                     <p className="text-xs text-gray-400">{formatDate(comment.created_at)}</p>
                     <CommentLikeButton commentId={comment.id} initialLikes={comment.likes} />

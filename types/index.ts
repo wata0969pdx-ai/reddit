@@ -15,6 +15,7 @@ export type Comment = {
   body: string
   likes: number
   reply_to_id: string | null
+  image_url: string | null
   created_at: string
 }
 
