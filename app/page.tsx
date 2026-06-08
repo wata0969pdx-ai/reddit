@@ -2,20 +2,26 @@ import { Suspense } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import CategoryFilter from '@/components/CategoryFilter'
 import SearchBar from '@/components/SearchBar'
+import SortSelector from '@/components/SortSelector'
 import PostCard from '@/components/PostCard'
 import Link from 'next/link'
 import { Post } from '@/types'
 
-type SearchParams = Promise<{ category?: string; search?: string }>
+type SearchParams = Promise<{ category?: string; search?: string; sort?: string }>
 
 // 投稿一覧をSupabaseから取得する関数
-async function fetchPosts(category?: string, search?: string): Promise<Post[]> {
+async function fetchPosts(category?: string, search?: string, sort?: string): Promise<Post[]> {
   const supabase = createSupabaseClient()
 
-  let query = supabase
-    .from('posts')
-    .select('*, comments(count)')
-    .order('created_at', { ascending: false })
+  let query = supabase.from('posts').select('*, comments(count)')
+
+  // 並べ替え：人気順はいいね数、それ以外は新着順で取得する
+  // （コメント数順は件数を取得したあとにJavaScript側で並べ替える）
+  if (sort === 'popular') {
+    query = query.order('likes', { ascending: false }).order('created_at', { ascending: false })
+  } else {
+    query = query.order('created_at', { ascending: false })
+  }
 
   // カテゴリーが指定されている場合は絞り込む
   if (category && category !== 'all') {
@@ -39,11 +45,18 @@ async function fetchPosts(category?: string, search?: string): Promise<Post[]> {
   }
 
   // comments(count) の結果を comment_count に変換
-  return (data ?? []).map((post) => ({
+  const posts: Post[] = (data ?? []).map((post) => ({
     ...post,
     comment_count: (post.comments as { count: number }[])[0]?.count ?? 0,
     comments: undefined,
   }))
+
+  // コメント数順はSupabaseでは並べ替えできないため、ここで並べ替える
+  if (sort === 'comments') {
+    posts.sort((a, b) => (b.comment_count ?? 0) - (a.comment_count ?? 0))
+  }
+
+  return posts
 }
 
 export default async function HomePage({
@@ -51,8 +64,8 @@ export default async function HomePage({
 }: {
   searchParams: SearchParams
 }) {
-  const { category, search } = await searchParams
-  const posts = await fetchPosts(category, search)
+  const { category, search, sort } = await searchParams
+  const posts = await fetchPosts(category, search, sort)
 
   return (
     <div>
@@ -78,6 +91,11 @@ export default async function HomePage({
       {/* カテゴリーフィルター */}
       <Suspense fallback={<div className="h-10 bg-gray-100 rounded animate-pulse mb-4" />}>
         <CategoryFilter />
+      </Suspense>
+
+      {/* 並べ替え */}
+      <Suspense fallback={<div className="h-8 bg-gray-100 rounded animate-pulse mb-4" />}>
+        <SortSelector />
       </Suspense>
 
       {/* 投稿一覧 */}
