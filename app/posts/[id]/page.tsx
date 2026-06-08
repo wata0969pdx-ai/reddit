@@ -4,19 +4,9 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { Post, Comment, CATEGORY_LABELS, CATEGORY_COLORS } from '@/types'
 import LikeButton from '@/components/LikeButton'
 import CommentSection from '@/components/CommentSection'
+import { formatRelativeTime } from '@/lib/time'
 
 type Params = Promise<{ id: string }>
-
-function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString('ja-JP', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
 
 // 投稿の詳細を取得
 async function fetchPost(id: string): Promise<Post | null> {
@@ -84,7 +74,7 @@ export default async function PostDetailPage({ params }: { params: Params }) {
 
         {/* 投稿日時 */}
         <p className="text-xs text-gray-400 mb-4">
-          {formatDate(post.created_at)}
+          {formatRelativeTime(post.created_at)}
         </p>
 
         {/* 画像 */}

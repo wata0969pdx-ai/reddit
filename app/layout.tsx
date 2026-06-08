@@ -17,7 +17,7 @@ export default function RootLayout({
       <body className="min-h-screen" style={{ background: '#f0f4f8' }}>
         {/* ヘッダー */}
         <header style={{ background: '#1a3c6e' }} className="text-white shadow-md sticky top-0 z-50">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
             {/* ロゴ */}
             <Link href="/" className="flex items-center gap-2">
               <span className="text-2xl">⚽</span>
@@ -36,7 +36,7 @@ export default function RootLayout({
         </header>
 
         {/* メインコンテンツ */}
-        <main className="max-w-4xl mx-auto px-4 py-6">
+        <main className="max-w-5xl mx-auto px-4 py-6">
           {children}
         </main>
 
