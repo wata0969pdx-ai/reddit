@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
+import { compressImage } from '@/lib/image'
 import { CATEGORIES } from '@/types'
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -63,12 +64,14 @@ export default function PostForm() {
 
       // 画像が選択されていればStorageにアップロード
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop()
+        // アップロード前に縮小・WebP変換して転送量と保存容量を節約する
+        const { file: uploadFile } = await compressImage(imageFile)
+        const fileExt = uploadFile.name.split('.').pop()
         const fileName = `${crypto.randomUUID()}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
           .from('post-images')
-          .upload(fileName, imageFile)
+          .upload(fileName, uploadFile, { contentType: uploadFile.type })
 
         if (uploadError) throw uploadError
 

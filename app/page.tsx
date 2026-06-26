@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { unstable_cache } from 'next/cache'
 import { createSupabaseClient } from '@/lib/supabase'
 import CategoryFilter from '@/components/CategoryFilter'
 import SearchBar from '@/components/SearchBar'
@@ -10,72 +11,86 @@ import { Post } from '@/types'
 
 type SearchParams = Promise<{ category?: string; search?: string; sort?: string }>
 
-// 投稿一覧をSupabaseから取得する関数
-async function fetchPosts(category?: string, search?: string, sort?: string): Promise<Post[]> {
-  const supabase = createSupabaseClient()
+// ホーム画面の投稿一覧は同じ内容が短時間に何度も読まれるため、
+// unstable_cache で結果を一定時間キャッシュしてDBへの問い合わせ回数を減らす。
+// （引数の category / search / sort は自動でキャッシュキーに含まれる）
+// 新しい投稿やコメントは最大 REVALIDATE_SECONDS 秒で一覧に反映される。
+const REVALIDATE_SECONDS = 30
 
-  let query = supabase.from('posts').select('*, comments(count)')
+// 投稿一覧をSupabaseから取得する関数（キャッシュ対象）
+const fetchPosts = unstable_cache(
+  async (category?: string, search?: string, sort?: string): Promise<Post[]> => {
+    const supabase = createSupabaseClient()
 
-  // 並べ替え：人気順はいいね数、それ以外は新着順で取得する
-  // （コメント数順は件数を取得したあとにJavaScript側で並べ替える）
-  if (sort === 'popular') {
-    query = query.order('likes', { ascending: false }).order('created_at', { ascending: false })
-  } else {
-    query = query.order('created_at', { ascending: false })
-  }
+    let query = supabase.from('posts').select('*, comments(count)')
 
-  // カテゴリーが指定されている場合は絞り込む
-  if (category && category !== 'all') {
-    query = query.eq('category', category)
-  }
-
-  // キーワードが指定されている場合はタイトル・本文から検索する
-  if (search) {
-    // フィルター構文を壊す記号を取り除く
-    const keyword = search.replace(/[,()%]/g, '').trim()
-    if (keyword) {
-      query = query.or(`title.ilike.%${keyword}%,body.ilike.%${keyword}%`)
+    // 並べ替え：人気順はいいね数、それ以外は新着順で取得する
+    // （コメント数順は件数を取得したあとにJavaScript側で並べ替える）
+    if (sort === 'popular') {
+      query = query.order('likes', { ascending: false }).order('created_at', { ascending: false })
+    } else {
+      query = query.order('created_at', { ascending: false })
     }
-  }
 
-  const { data, error } = await query
+    // カテゴリーが指定されている場合は絞り込む
+    if (category && category !== 'all') {
+      query = query.eq('category', category)
+    }
 
-  if (error) {
-    console.error('投稿の取得に失敗しました:', error)
-    return []
-  }
+    // キーワードが指定されている場合はタイトル・本文から検索する
+    if (search) {
+      // フィルター構文を壊す記号を取り除く
+      const keyword = search.replace(/[,()%]/g, '').trim()
+      if (keyword) {
+        query = query.or(`title.ilike.%${keyword}%,body.ilike.%${keyword}%`)
+      }
+    }
 
-  // comments(count) の結果を comment_count に変換
-  const posts: Post[] = (data ?? []).map((post) => ({
-    ...post,
-    comment_count: (post.comments as { count: number }[])[0]?.count ?? 0,
-    comments: undefined,
-  }))
+    const { data, error } = await query
 
-  // コメント数順はSupabaseでは並べ替えできないため、ここで並べ替える
-  if (sort === 'comments') {
-    posts.sort((a, b) => (b.comment_count ?? 0) - (a.comment_count ?? 0))
-  }
+    if (error) {
+      console.error('投稿の取得に失敗しました:', error)
+      return []
+    }
 
-  return posts
-}
+    // comments(count) の結果を comment_count に変換
+    const posts: Post[] = (data ?? []).map((post) => ({
+      ...post,
+      comment_count: (post.comments as { count: number }[])[0]?.count ?? 0,
+      comments: undefined,
+    }))
 
-// サイドバー用：いいねが多い人気の投稿を取得する
-async function fetchPopularPosts(): Promise<Post[]> {
-  const supabase = createSupabaseClient()
-  const { data, error } = await supabase
-    .from('posts')
-    .select('*')
-    .order('likes', { ascending: false })
-    .limit(5)
+    // コメント数順はSupabaseでは並べ替えできないため、ここで並べ替える
+    if (sort === 'comments') {
+      posts.sort((a, b) => (b.comment_count ?? 0) - (a.comment_count ?? 0))
+    }
 
-  if (error) {
-    console.error('人気の投稿の取得に失敗しました:', error)
-    return []
-  }
+    return posts
+  },
+  ['home-posts'],
+  { revalidate: REVALIDATE_SECONDS, tags: ['posts'] }
+)
 
-  return data ?? []
-}
+// サイドバー用：いいねが多い人気の投稿を取得する（キャッシュ対象）
+const fetchPopularPosts = unstable_cache(
+  async (): Promise<Post[]> => {
+    const supabase = createSupabaseClient()
+    const { data, error } = await supabase
+      .from('posts')
+      .select('*')
+      .order('likes', { ascending: false })
+      .limit(5)
+
+    if (error) {
+      console.error('人気の投稿の取得に失敗しました:', error)
+      return []
+    }
+
+    return data ?? []
+  },
+  ['popular-posts'],
+  { revalidate: REVALIDATE_SECONDS, tags: ['posts'] }
+)
 
 export default async function HomePage({
   searchParams,
