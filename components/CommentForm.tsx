@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import { compressImage } from '@/lib/image'
+import { revalidatePosts } from '@/app/actions'
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
 
@@ -106,6 +107,8 @@ export default function CommentForm({ postId, replyTo = null, onCancelReply }: P
       setBody('')
       handleRemoveImage()
       onCancelReply?.()
+      // 一覧のキャッシュ（コメント数）を無効化してホーム画面へ即時反映させる
+      await revalidatePosts()
       // サーバーコンポーネントのデータを再取得して画面を更新
       router.refresh()
     } catch (err) {

@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import { compressImage } from '@/lib/image'
+import { revalidatePosts } from '@/app/actions'
 import { CATEGORIES } from '@/types'
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024 // 5MB
@@ -89,6 +90,9 @@ export default function PostForm() {
         .single()
 
       if (supabaseError) throw supabaseError
+
+      // 一覧のキャッシュを無効化して、新しい投稿をホーム画面へ即時反映させる
+      await revalidatePosts()
 
       // 作成した投稿の詳細ページへ移動
       router.push(`/posts/${data.id}`)
